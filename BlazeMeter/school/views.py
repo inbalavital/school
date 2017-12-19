@@ -14,10 +14,31 @@ class ObjectList(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+    def validate_email(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = request.data['email']
+        try:
+            Teacher.objects.get(email=email)
+            response = {'teacher': ['a teacher with this email already exists']}
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+        except Teacher.DoesNotExist:
+            try:
+                Student.objects.get(email=email)
+                response = {'student': ['a student with this email already exists']}
+                return Response(response, status=status.HTTP_400_BAD_REQUEST)
+            except Student.DoesNotExist:
+                self.perform_create(serializer)
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 class StudentViewSet(ObjectList):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
+
+    def create(self, request, *args, **kwargs):
+        return self.validate_email(request)
 
     @list_route(methods=['get'])
     def student_highest_average(self, request):
@@ -36,6 +57,9 @@ class StudentViewSet(ObjectList):
 class TeacherViewSet(ObjectList):
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
+
+    def create(self, request, *args, **kwargs):
+        return self.validate_email(request)
 
     @list_route(methods=['get'])
     def teacher_max_students(self, request):
