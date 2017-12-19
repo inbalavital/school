@@ -7,12 +7,12 @@ class APITests(TestCase):
     def setUp(self):
         self.client = Client()
 
-    def create(self, model, data, excpected_status):
+    def create(self, model, data, expected_status):
         response = self.client.post('/school/' + model + '/', data)
-        self.assertEqual(response.status_code, excpected_status)
+        self.assertEqual(response.status_code, expected_status)
 
     def read(self, model):
-        # expect the entire model list to contain one object
+        # expect the model list to contain one object
         request = self.client.get('/school/' + model + '/')
         self.assertEqual(len(request.json()), 1)
         self.assertEqual(request.status_code, 200)

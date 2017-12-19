@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Student, Teacher, Course, Grade
 
+
 class StudentSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -16,8 +17,6 @@ class TeacherSerializer(serializers.ModelSerializer):
 
 
 class CourseSerializer(serializers.ModelSerializer):
-    # student = StudentSerializer(many=True, source='id')
-    # teacher = TeacherSerializer()
 
     class Meta:
         model = Course
@@ -25,8 +24,6 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class GradeSerializer(serializers.ModelSerializer):
-    # student = StudentSerializer()
-    # course = CourseSerializer()
 
     class Meta:
         model = Grade
