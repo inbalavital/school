@@ -12,17 +12,25 @@ class APITests(TestCase):
         self.assertEqual(response.status_code, excpected_status)
 
     def read(self, model):
+        # expect the entire model list to contain one object
         request = self.client.get('/school/' + model + '/')
         self.assertEqual(len(request.json()), 1)
         self.assertEqual(request.status_code, 200)
 
+        # check the id of the object we've just created
         specific_request = self.client.get('/school/' + model + '/1/')
         self.assertEqual(specific_request.json()['id'], 1)
         self.assertEqual(specific_request.status_code, 200)
 
-    def update(self, model, data):
+    def update(self, model, data, field):
         response = self.client.patch('/school/' + model + '/1/', data=data, content_type='application/json')
         self.assertEqual(response.status_code, 200)
+
+        value = json.loads(data)[field]
+        # check the updated field value
+        specific_request = self.client.get('/school/' + model + '/1/')
+        self.assertEqual(specific_request.json()[field], value)
+        self.assertEqual(specific_request.status_code, 200)
 
     def delete(self, model):
         response = self.client.delete('/school/' + model + '/1/')
@@ -45,6 +53,7 @@ class APITests(TestCase):
         self.create('grades', data_grades, 201)
 
     def test_CRUD(self):
+        # test the post command
         self.create_students()
         self.create_teachers()
         student = Student.objects.last().id
@@ -53,19 +62,22 @@ class APITests(TestCase):
         course = Course.objects.last().id
         self.create_grades(student, course)
 
+        # test the get command
         self.read('students')
         self.read('teachers')
         self.read('courses')
         self.read('grades')
 
+        # test the update command
         data_students_teachers = json.dumps({'first_name': 'FName1_new'})
-        self.update('students', data_students_teachers)
-        self.update('teachers', data_students_teachers)
+        self.update('students', data_students_teachers, 'first_name')
+        self.update('teachers', data_students_teachers, 'first_name')
         data_courses = json.dumps({'name': 'CName1_new'})
-        self.update('courses', data_courses)
+        self.update('courses', data_courses, 'name')
         data_grades = json.dumps({'grade': 90})
-        self.update('grades', data_grades)
+        self.update('grades', data_grades, 'grade')
 
+        # test the delete command
         self.delete('grades')
         self.delete('courses')
         self.delete('students')
@@ -95,6 +107,7 @@ class APITests(TestCase):
         course1.student.add(student1, student2)
         course2 = Course.objects.create(name="CName2", teacher=teacher2)
         course2.student.add(student1)
+        # check that teacher1 is the teacher with max number of students
         self.teacher_max_students()
 
         course2.student.add(student2)
@@ -102,13 +115,15 @@ class APITests(TestCase):
         Grade.objects.create(grade=90, student=student1, course=course2)
         Grade.objects.create(grade=85, student=student2, course=course1)
         Grade.objects.create(grade=90, student=student2, course=course2)
+        # check that student2 is the student with highest average in courses
         self.student_highest_average()
+        # check that course2 is the easiest course
         self.easiest_course()
 
     def test_db_validations(self):
         student = Student.objects.create(first_name='FName1', last_name='LName1', email='FName1@gmail.com')
         data_student_teacher = {'first_name': 'FName2', 'last_name': 'LName2', 'email': 'FName1@gmail.com'}
-        # validate there are no two persons (student or teacher) with the same email
+        # validate that a second person (student or teacher) with the same email won't be created
         self.create('students', data_student_teacher, 400)
         self.create('teachers', data_student_teacher, 400)
 
@@ -116,15 +131,15 @@ class APITests(TestCase):
         course = Course.objects.create(name="CName", teacher=teacher)
 
         data_course = {'name': 'CName', 'teacher': teacher, 'student': [student]}
-        # validate there are no two courses with the same name
+        # validate that a second course with the same name won't be created
         self.create('courses', data_course, 400)
 
         data_grade = {'grade': 85, 'student': student, 'course': course}
-        # validate a student can't get a course grade in a course he isn't enrolled in
+        # validate that a student can't get a course grade in a course he isn't enrolled in
         self.create('grades', data_grade, 400)
 
         course.student.add(student)
         Grade.objects.create(grade=85, course=course, student=student)
         data_grade = {'grade': 90, 'student': student, 'course': course}
-        # validate there are no two course grades to the same student
+        # validate that a second course grade to the same student won't be created
         self.create('grades', data_grade, 400)

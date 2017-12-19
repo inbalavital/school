@@ -16,11 +16,26 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
-from rest_framework.urlpatterns import format_suffix_patterns
-from school import views
+from rest_framework.routers import DefaultRouter
+from django.contrib.auth.models import User
+from rest_framework import serializers, viewsets
+
+
+class UserSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = User
+        fields = ('url', 'username', 'email')
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+router = DefaultRouter()
+router.register(r'users', UserViewSet)
 
 urlpatterns = [
+    url(r'^', include(router.urls)),
     url(r'^admin/', admin.site.urls),
-    # url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^school/', include('school.urls')),
 ]
